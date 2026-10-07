@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   postgres-sales:
     image: postgres:15-alpine
@@ -20,12 +22,15 @@ services:
     ports:
       - "8084:8084"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/erp_sales
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-sales:5432/erp_sales
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       EUREKA_CLIENT_REGISTER_WITH_EUREKA: "true"
       EUREKA_CLIENT_FETCH_REGISTRY: "true"
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    volumes:
+      # Menghubungkan folder uploads di dalam kontainer ke folder lokal proyek Anda
+      - ./uploads:/app/uploads
     depends_on:
       - postgres-sales
     networks:
