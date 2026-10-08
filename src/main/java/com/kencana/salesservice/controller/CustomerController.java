@@ -38,7 +38,9 @@ public class CustomerController {
         
         if (nik != null && !nik.isEmpty()) {
             customer = customerRepository.findByNik(nik);
-        } else if (name != null && !name.isEmpty()) {
+        } 
+        
+        if (!customer.isPresent() && name != null && !name.isEmpty()) {
             customer = customerRepository.findByNameIgnoreCase(name);
         }
 
