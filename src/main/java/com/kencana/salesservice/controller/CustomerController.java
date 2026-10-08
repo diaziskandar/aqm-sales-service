@@ -17,7 +17,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/sales/customers")
+@RequestMapping("/api/customers")
 public class CustomerController {
 
     @Autowired
