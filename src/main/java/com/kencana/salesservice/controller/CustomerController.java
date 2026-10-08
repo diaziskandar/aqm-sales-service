@@ -12,8 +12,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -54,36 +54,39 @@ public class CustomerController {
         }
     }
 
-    // 3. Endpoint Pendaftaran Customer Baru + Upload Scan KTP
+   // 3. Endpoint Pendaftaran Customer Baru + Upload Banyak Lampiran Dokumen Secara Dinamis
     @PostMapping(consumes = {"multipart/form-data"})
-    public ResponseEntity<?> createCustomerWithKtp(
+    public ResponseEntity<?> createCustomerWithAttachments(
             @RequestParam("name") String name,
             @RequestParam("nik") String nik,
             @RequestParam(value = "phone", required = false) String phone,
             @RequestParam(value = "address", required = false) String address,
             @RequestParam(value = "email", required = false) String email,
-            @RequestParam(value = "ktpFile", required = false) MultipartFile ktpfile) {
-
+            @RequestParam(value = "attachments", required = false) MultipartFile[] attachments
+    ) {
         // Validasi apakah NIK sudah terdaftar
         if (customerRepository.findByNik(nik).isPresent()) {
             return ResponseEntity.badRequest().body("Customer dengan NIK tersebut sudah terdaftar.");
         }
 
-        String fileName = null;
-        if (ktpfile != null && !ktpfile.isEmpty()) {
-            try {
-                // Buat folder uploads jika belum ada
-                File directory = new File(UPLOAD_DIR);
-                if (!directory.exists()) {
-                    directory.mkdirs();
-                }
+        List<String> savedFilePaths = new ArrayList<>();
+        if (attachments != null && attachments.length > 0) {
+            File directory = new File(UPLOAD_DIR);
+            if (!directory.exists()) {
+                directory.mkdirs();
+            }
 
-                // Generate nama unik untuk file gambar KTP
-                fileName = UUID.randomUUID().toString() + "_" + ktpfile.getOriginalFilename();
-                Path filePath = Paths.get(UPLOAD_DIR + fileName);
-                Files.write(filePath, ktpfile.getBytes());
-            } catch (IOException e) {
-                return ResponseEntity.status(500).body("Gagal mengunggah file scan KTP.");
+            for (MultipartFile file : attachments) {
+                if (!file.isEmpty()) {
+                    try {
+                        String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+                        Path filePath = Paths.get(UPLOAD_DIR + fileName);
+                        Files.write(filePath, file.getBytes());
+                        savedFilePaths.add(UPLOAD_DIR + fileName);
+                    } catch (IOException e) {
+                        return ResponseEntity.status(500).body("Gagal mengunggah salah satu file lampiran.");
+                    }
+                }
             }
         }
 
@@ -94,7 +97,9 @@ public class CustomerController {
         customer.setPhone(phone);
         customer.setAddress(address);
         customer.setEmail(email);
-        customer.setKtpImageUrl(fileName != null ? UPLOAD_DIR + fileName : null);
+        
+        // Menggabungkan banyak path file dengan pemisah koma
+        customer.setAttachments(savedFilePaths.isEmpty() ? null : String.join(",", savedFilePaths));
 
         Customer savedCustomer = customerRepository.save(customer);
         return ResponseEntity.ok(savedCustomer);
