@@ -23,8 +23,8 @@ public class Customer {
 
     private String email;
 
-    @Column(length = 500)
-    private String ktpImageUrl; // Path / URL file scan KTP yang diunggah
+    @Column(columnDefinition = "TEXT")
+    private String attachments; // Menyimpan daftar path file lampiran (dipisah koma)
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -47,8 +47,8 @@ public class Customer {
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 
-    public String getKtpImageUrl() { return ktpImageUrl; }
-    public void setKtpImageUrl(String ktpImageUrl) { this.ktpImageUrl = ktpImageUrl; }
+    public String getAttachments() { return attachments; }
+    public void setAttachments(String attachments) { this.attachments = attachments; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
