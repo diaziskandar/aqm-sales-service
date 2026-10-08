@@ -7,7 +7,7 @@ spring:
   datasource:
     url: jdbc:postgresql://host.docker.internal:5432/erp_sales
     username: postgres
-    password: postgres # Sesuaikan dengan password database lokal Anda
+    password: postgres
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -32,3 +32,9 @@ management:
     web:
       exposure:
         include: "*"
+
+# Penambahan konfigurasi logging untuk melacak request controller
+logging:
+  level:
+    org.springframework.web: DEBUG
+    com.kencana.salesservice: DEBUG

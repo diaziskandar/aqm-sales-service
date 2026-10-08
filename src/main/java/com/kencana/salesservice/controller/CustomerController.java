@@ -36,7 +36,7 @@ public class CustomerController {
     @GetMapping("/check")
     public ResponseEntity<?> checkCustomer(@RequestParam(required = false) String nik, @RequestParam(required = false) String name) {
         Optional<Customer> customer = Optional.empty();
-        
+        System.out.println("=== ENDPOINT /api/customers/check DIPANGGIL ===");
         if (nik != null && !nik.isEmpty()) {
             customer = customerRepository.findByNik(nik);
         } 
