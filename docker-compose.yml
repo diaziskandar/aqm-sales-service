@@ -22,7 +22,7 @@ services:
     ports:
       - "8084:8084"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-sales:5432/erp_sales
+      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/erp_sales
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       EUREKA_CLIENT_REGISTER_WITH_EUREKA: "true"
