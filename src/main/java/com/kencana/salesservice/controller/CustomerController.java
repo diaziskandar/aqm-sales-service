@@ -27,7 +27,7 @@ public class CustomerController {
     private final String UPLOAD_DIR = "uploads/ktp/";
 
     // 1. Endpoint mendapatkan semua customer
-    @GetMapping
+    @GetMapping("/all")
     public List<Customer> getAllCustomers() {
         return customerRepository.findAll();
     }
