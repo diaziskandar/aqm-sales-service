@@ -26,12 +26,13 @@ public class CustomerController {
     // Direktori penyimpanan file scan KTP di server
     private final String UPLOAD_DIR = "uploads/ktp/";
 
+    // 1. Endpoint mendapatkan semua customer
     @GetMapping
     public List<Customer> getAllCustomers() {
         return customerRepository.findAll();
     }
 
-    // Endpoint Cek KTP / Nama Pelanggan
+    // 2. Endpoint Cek KTP / Nama Pelanggan (Untuk mengatasi 404)
     @GetMapping("/check")
     public ResponseEntity<?> checkCustomer(@RequestParam(required = false) String nik, @RequestParam(required = false) String name) {
         Optional<Customer> customer = Optional.empty();
@@ -51,7 +52,7 @@ public class CustomerController {
         }
     }
 
-    // Endpoint Pendaftaran Customer Baru + Upload Scan KTP
+    // 3. Endpoint Pendaftaran Customer Baru + Upload Scan KTP
     @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<?> createCustomerWithKtp(
             @RequestParam("name") String name,
