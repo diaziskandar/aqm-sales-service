@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,7 +34,7 @@ public class CustomerController {
     }
 
     // 2. Endpoint Cek KTP / Nama Pelanggan (Untuk mengatasi 404)
-    @GetMapping("/check")
+   @GetMapping("/check")
     public ResponseEntity<?> checkCustomer(@RequestParam(required = false) String nik, @RequestParam(required = false) String name) {
         Optional<Customer> customer = Optional.empty();
         System.out.println("=== ENDPOINT /api/customers/check DIPANGGIL ===");
@@ -48,7 +49,8 @@ public class CustomerController {
         if (customer.isPresent()) {
             return ResponseEntity.ok(customer.get());
         } else {
-            return ResponseEntity.status(404).body("Customer belum terdaftar.");
+            // Menggunakan ResponseEntity.ok() agar tidak memunculkan baris merah (404) di Network browser
+            return ResponseEntity.ok().body(Map.of("exists", false, "message", "Customer belum terdaftar."));
         }
     }
 
