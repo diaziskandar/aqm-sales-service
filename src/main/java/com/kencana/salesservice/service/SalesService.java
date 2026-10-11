@@ -1,79 +1,116 @@
 package com.kencana.salesservice.service;
 
-import com.kencana.salesservice.client.InventoryClient;
 import com.kencana.salesservice.dto.ItemResponse;
 import com.kencana.salesservice.dto.ItemTypeResponse;
 import com.kencana.salesservice.model.SalesTransaction;
 import com.kencana.salesservice.repository.SalesTransactionRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class SalesService {
 
-    private final SalesTransactionRepository salesTransactionRepository;
-    private final InventoryClient inventoryClient;
+    @Autowired
+    private SalesTransactionRepository salesTransactionRepository;
 
-    public SalesService(SalesTransactionRepository salesTransactionRepository, InventoryClient inventoryClient) {
-        this.salesTransactionRepository = salesTransactionRepository;
-        this.inventoryClient = inventoryClient;
-    }
-
-    public Page<SalesTransaction> getTransactions(int page, int size, String sortBy, String direction, String search, String startDateStr, String endDateStr) {
+    // 1. Mengambil data transaksi dengan dukungan Pagination, Sorting, dan Search
+    public Page<SalesTransaction> getTransactions(int page, int size, String sortBy, String direction, String search, String startDate, String endDate) {
         Sort sort = Sort.by(Sort.Direction.fromString(direction), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
-        
-        LocalDate startDate = (startDateStr != null && !startDateStr.trim().isEmpty() && !startDateStr.equals("undefined")) ? LocalDate.parse(startDateStr) : null;
-        LocalDate endDate = (endDateStr != null && !endDateStr.trim().isEmpty() && !endDateStr.equals("undefined")) ? LocalDate.parse(endDateStr) : null;
-        
-        String cleanSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
 
-        // Panggil query repository yang sesuai secara dinamis untuk menghindari parameter null bertipe date di PostgreSQL
-        if (startDate != null && endDate != null) {
-            return salesTransactionRepository.searchAndFilterByDateRange(cleanSearch, startDate, endDate, pageable);
-        } else if (startDate != null) {
-            return salesTransactionRepository.searchAndFilterByStartDate(cleanSearch, startDate, pageable);
-        } else if (endDate != null) {
-            return salesTransactionRepository.searchAndFilterByEndDate(cleanSearch, endDate, pageable);
-        } else {
-            return salesTransactionRepository.searchOnly(cleanSearch, pageable);
+        if (search != null && !search.trim().isEmpty()) {
+            return salesTransactionRepository.findByCustomerNameContainingIgnoreCase(search.trim(), pageable);
         }
+        
+        return salesTransactionRepository.findAll(pageable);
     }
 
-    // Ambil semua data transaksi sales (method lama dipertahankan)
-    public List<SalesTransaction> getAllTransactions() {
-        return salesTransactionRepository.findAll();
-    }
-
-    // Ambil detail transaksi berdasarkan ID
-    public Optional<SalesTransaction> getTransactionById(Long id) {
-        return salesTransactionRepository.findById(id);
-    }
-
-    // Simpan transaksi baru
+    // 2. Menyimpan Transaksi Master-Detail standar (tanpa file)
+    @Transactional
     public SalesTransaction saveTransaction(SalesTransaction transaction) {
+        if (transaction.getItems() == null || transaction.getItems().isEmpty()) {
+            throw new IllegalArgumentException("Transaksi penjualan minimal harus memiliki 1 item barang.");
+        }
+
+        if (transaction.getDate() == null) {
+            transaction.setDate(LocalDate.now());
+        }
+
         return salesTransactionRepository.save(transaction);
     }
 
-    // Hapus transaksi
-    public void deleteTransaction(Long id) {
-        salesTransactionRepository.deleteById(id);
+    // 3. Menyimpan Transaksi dengan Multiple Lampiran Bukti Transaksi (Opsional)
+    @Transactional
+    public SalesTransaction saveTransactionWithMultipleAttachments(SalesTransaction transaction, MultipartFile[] attachments) {
+        if (transaction.getItems() == null || transaction.getItems().isEmpty()) {
+            throw new IllegalArgumentException("Transaksi penjualan minimal harus memiliki 1 item barang.");
+        }
+
+        if (transaction.getDate() == null) {
+            transaction.setDate(LocalDate.now());
+        }
+
+        if (attachments != null && attachments.length > 0) {
+            List<String> filePaths = new ArrayList<>();
+            try {
+                String uploadDir = "uploads/sales/";
+                File uploadDirFile = new File(uploadDir);
+                if (!uploadDirFile.exists()) {
+                    uploadDirFile.mkdirs();
+                }
+
+                for (MultipartFile file : attachments) {
+                    if (file != null && !file.isEmpty()) {
+                        String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
+                        Path filePath = Paths.get(uploadDir + fileName);
+                        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+                        filePaths.add(uploadDir + fileName);
+                    }
+                }
+
+                // Gabungkan path file dengan koma jika ada lebih dari 1 file
+                if (!filePaths.isEmpty()) {
+                    transaction.setAttachment(String.join(", ", filePaths));
+                }
+            } catch (IOException e) {
+                throw new RuntimeException("Gagal menyimpan file lampiran bukti transaksi", e);
+            }
+        }
+
+        return salesTransactionRepository.save(transaction);
     }
 
-    // Mengambil daftar Tipe Item dari inventory-service via Feign Client
+    // 4. Mengambil riwayat transaksi berdasarkan nama customer
+    public List<SalesTransaction> getSalesByCustomerName(String customerName) {
+        return salesTransactionRepository.findByCustomerNameContainingIgnoreCase(customerName);
+    }
+
+    // 5. Integrasi / Dummy untuk jenis item dari Inventory Service
     public List<ItemTypeResponse> getAvailableItemTypes() {
-        return inventoryClient.getAllItemTypes();
+        return List.of(); 
     }
 
-    // Mengambil daftar Item dari inventory-service via Feign Client
+    // 6. Integrasi / Dummy untuk item dari Inventory Service
     public List<ItemResponse> getAvailableItems() {
-        return inventoryClient.getAllItems();
+        return List.of(); 
     }
+    public SalesTransaction getTransactionById(Long id) {
+    return salesTransactionRepository.findById(id).orElse(null);
+}
 }

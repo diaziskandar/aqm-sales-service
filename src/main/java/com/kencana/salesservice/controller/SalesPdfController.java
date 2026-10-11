@@ -1,6 +1,7 @@
 package com.kencana.salesservice.controller;
 
 import com.kencana.salesservice.model.SalesTransaction;
+import com.kencana.salesservice.model.SalesTransactionItem;
 import com.kencana.salesservice.repository.SalesTransactionRepository;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
@@ -47,7 +48,7 @@ public class SalesPdfController {
             Font normalFont = new Font(Font.HELVETICA, 10, Font.NORMAL, Color.DARK_GRAY);
             Font headerFont = new Font(Font.HELVETICA, 10, Font.BOLD, Color.WHITE);
 
-            // --- KOP HEADER (AQM Hearing Center) ---
+            // --- KOP HEADER ---
             PdfPTable headerTable = new PdfPTable(2);
             headerTable.setWidthPercentage(100);
             headerTable.setWidths(new float[]{2f, 3f});
@@ -75,7 +76,8 @@ public class SalesPdfController {
             // --- RINGKASAN (SUMMARY) ---
             int totalTransaksi = transactions.size();
             double totalPendapatan = transactions.stream()
-                    .mapToDouble(t -> t.getTotalPrice() != null ? t.getTotalPrice().doubleValue() : 0.0)
+                    .flatMap(t -> t.getItems() != null ? t.getItems().stream() : java.util.stream.Stream.empty())
+                    .mapToDouble(item -> item.getTotalPrice() != null ? item.getTotalPrice().doubleValue() : 0.0)
                     .sum();
             NumberFormat idrFormat = NumberFormat.getCurrencyInstance(new Locale("id", "ID"));
 
@@ -103,19 +105,24 @@ public class SalesPdfController {
                 table.addCell(cell);
             }
 
+            // Melakukan looping untuk setiap transaksi dan setiap item di dalamnya
             for (SalesTransaction t : transactions) {
-                table.addCell(new PdfPCell(new Paragraph(String.valueOf(t.getDate()), normalFont)));
-                table.addCell(new PdfPCell(new Paragraph(t.getCustomerName(), normalFont)));
-                table.addCell(new PdfPCell(new Paragraph(t.getItemName(), normalFont)));
-                
-                PdfPCell qtyCell = new PdfPCell(new Paragraph(String.valueOf(t.getQuantity()), normalFont));
-                qtyCell.setHorizontalAlignment(Element.ALIGN_CENTER);
-                table.addCell(qtyCell);
+                if (t.getItems() != null) {
+                    for (SalesTransactionItem item : t.getItems()) {
+                        table.addCell(new PdfPCell(new Paragraph(String.valueOf(t.getDate()), normalFont)));
+                        table.addCell(new PdfPCell(new Paragraph(t.getCustomerName(), normalFont)));
+                        table.addCell(new PdfPCell(new Paragraph(item.getItemName(), normalFont)));
+                        
+                        PdfPCell qtyCell = new PdfPCell(new Paragraph(String.valueOf(item.getQuantity()), normalFont));
+                        qtyCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+                        table.addCell(qtyCell);
 
-                double price = t.getTotalPrice() != null ? t.getTotalPrice().doubleValue() : 0.0;
-                table.addCell(new PdfPCell(new Paragraph(idrFormat.format(price).replace("Rp", "Rp "), normalFont)));
-                
-                table.addCell(new PdfPCell(new Paragraph(t.getItemType() != null ? t.getItemType() : "-", normalFont)));
+                        double price = item.getTotalPrice() != null ? item.getTotalPrice().doubleValue() : 0.0;
+                        table.addCell(new PdfPCell(new Paragraph(idrFormat.format(price).replace("Rp", "Rp "), normalFont)));
+                        
+                        table.addCell(new PdfPCell(new Paragraph(item.getItemType() != null ? item.getItemType() : "-", normalFont)));
+                    }
+                }
             }
 
             document.add(table);
