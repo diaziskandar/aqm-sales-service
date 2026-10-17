@@ -4,6 +4,8 @@ import com.kencana.salesservice.dto.ItemResponse;
 import com.kencana.salesservice.dto.ItemTypeResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
@@ -11,7 +13,7 @@ import java.util.List;
 @FeignClient(name = "inventory-service")
 public interface InventoryClient {
 
-// pada interface ini berfungsi untuk melakukan koneksi maupun mengambil data dari projet inventory-service
+    // pada interface ini berfungsi untuk melakukan koneksi maupun mengambil data dari projet inventory-service
 
     // Menyesuaikan dengan endpoint GET yang ada di Inventory-Service
     @GetMapping("/api/inventory/types")
@@ -20,4 +22,10 @@ public interface InventoryClient {
     // Tambahkan method untuk mengambil daftar item
     @GetMapping("/api/inventory")
     List<ItemResponse> getAllItems();
+
+    // TAMBAHAN: Method untuk memanggil endpoint pengurangan stok di inventory-service
+    @PutMapping("/api/branch-inventory/deduct")
+    void deductStock(@RequestParam("branchId") Long branchId, 
+                     @RequestParam("itemId") Long itemId, 
+                     @RequestParam("quantity") int quantity);
 }
